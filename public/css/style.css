@@ -1,11 +1,16 @@
-* { box-sizing: border-box; }
-html, body {
+* {
+  box-sizing: border-box;
+}
+html,
+body {
   margin: 0;
   padding: 0;
   background: #0b3d24;
   color: #f2f2f2;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 #app {
@@ -15,9 +20,15 @@ html, body {
   min-height: 100vh;
 }
 
-h1, h2, h3 { margin: 0 0 8px; }
+h1,
+h2,
+h3 {
+  margin: 0 0 8px;
+}
 
-.hidden { display: none !important; }
+.hidden {
+  display: none !important;
+}
 
 .card {
   background: rgba(0, 0, 0, 0.25);
@@ -33,7 +44,8 @@ label {
   margin: 10px 0 4px;
 }
 
-input, select {
+input,
+select {
   width: 100%;
   padding: 12px;
   font-size: 16px;
@@ -52,15 +64,37 @@ button {
   font-weight: 600;
 }
 
-.btn-primary { background: #2e7d5b; color: #fff; }
-.btn-primary:hover { background: #368a65; }
-.btn-danger { background: #a3392f; color: #fff; }
-.btn-secondary { background: #274a3a; color: #fff; }
-.btn-block { width: 100%; margin-top: 10px; }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary {
+  background: #2e7d5b;
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #368a65;
+}
+.btn-danger {
+  background: #a3392f;
+  color: #fff;
+}
+.btn-secondary {
+  background: #274a3a;
+  color: #fff;
+}
+.btn-block {
+  width: 100%;
+  margin-top: 10px;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-.row { display: flex; gap: 8px; }
-.row > * { flex: 1; }
+.row {
+  display: flex;
+  gap: 8px;
+}
+.row > * {
+  flex: 1;
+}
 
 .error-banner {
   background: #a3392f;
@@ -70,50 +104,115 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   margin-bottom: 10px;
 }
 
-/* table */
-.table-felt {
-  background: radial-gradient(ellipse at center, #14663f 0%, #0b3d24 70%);
+/* oval table, drawn entirely in CSS. Fixed: 100% width, 90% of the
+   viewport height. Always fits the screen, no scrolling, no measuring. */
+.table-oval-wrap {
+  position: relative;
+  width: 100%;
+  height: 90vh;
+  margin: 0 0 12px;
+}
+
+.table-oval {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, #1a6b45 0%, #0d3d26 75%);
   border: 6px solid #5c3a21;
-  border-radius: 24px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.center-info {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 46%;
+  text-align: center;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .pot-line {
-  text-align: center;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
-  margin-bottom: 10px;
 }
-.pot-line .sub { display: block; font-size: 13px; font-weight: 400; opacity: 0.8; }
+.pot-line .sub {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.8;
+  margin-top: 2px;
+}
 
-.seats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.seats-ring {
+  position: absolute;
+  inset: 0;
+}
+
+.seat-pos {
+  position: absolute;
+  width: 15%;
+  max-width: 76px;
+  transform: translate(-50%, -50%);
 }
 
 .seat {
-  background: rgba(0, 0, 0, 0.3);
+  background: #163b28;
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   position: relative;
-  border: 2px solid transparent;
-  min-height: 64px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  min-height: 56px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-.seat.empty { opacity: 0.35; display: flex; align-items: center; justify-content: center; font-size: 13px; }
-.seat.folded { opacity: 0.4; }
-.seat.acting { border-color: #ffd54f; box-shadow: 0 0 0 2px rgba(255,213,79,0.4); }
-.seat.you { border-color: #4fc3f7; }
-.seat .name { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 4px; }
-.seat .chips { font-size: 13px; opacity: 0.9; }
-.seat .bet { font-size: 12px; color: #ffd54f; margin-top: 2px; }
+.seat.empty {
+  opacity: 0.35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.seat.folded {
+  opacity: 0.4;
+}
+.seat.acting {
+  border-color: #ffd54f;
+  box-shadow: 0 0 0 2px rgba(255, 213, 79, 0.4);
+}
+.seat.you {
+  border-color: #4fc3f7;
+}
+.seat .name {
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.seat .chips {
+  font-size: 12px;
+  opacity: 0.9;
+}
+.seat .bet {
+  font-size: 11px;
+  color: #ffd54f;
+  margin-top: 2px;
+}
 .seat .tag {
-  font-size: 10px;
+  font-size: 9px;
   background: #444;
   border-radius: 4px;
   padding: 1px 4px;
-  margin-left: 4px;
+  margin-left: 3px;
 }
 .seat .button-chip {
   position: absolute;
@@ -122,15 +221,28 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   background: #fff;
   color: #000;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.seat .disconnected { color: #ff8a80; font-size: 11px; }
+.seat .disconnected {
+  color: #ff8a80;
+  font-size: 10px;
+}
+
+@media (min-width: 420px) {
+  .seat-pos {
+    width: 21%;
+    max-width: 92px;
+  }
+  .seat {
+    font-size: 13px;
+  }
+}
 
 .timer-wrap {
   text-align: center;
@@ -140,7 +252,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   font-size: 32px;
   font-weight: 800;
 }
-.timer-circle.warn { color: #ff5252; }
+.timer-circle.warn {
+  color: #ff5252;
+}
 
 .actions {
   position: fixed;
@@ -159,7 +273,9 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   gap: 8px;
   margin-bottom: 8px;
 }
-.raise-box input { flex: 1; }
+.raise-box input {
+  flex: 1;
+}
 
 .log {
   font-size: 12px;
@@ -167,7 +283,10 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   max-height: 120px;
   overflow-y: auto;
 }
-.log div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.log div {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
 
 .badge-stage {
   display: inline-block;
@@ -179,10 +298,115 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   letter-spacing: 0.5px;
 }
 
-.muted { opacity: 0.7; font-size: 13px; }
+.muted {
+  opacity: 0.7;
+  font-size: 13px;
+}
 
-a.admin-link { color: #9fd8b8; font-size: 13px; }
+a.admin-link {
+  color: #9fd8b8;
+  font-size: 13px;
+}
 
-@media (min-width: 640px) {
-  .seats-grid { grid-template-columns: 1fr 1fr 1fr; }
+.paused-banner {
+  background: #7a5b17;
+  color: #fff;
+  text-align: center;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.help-link {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 5;
+  color: #9fd8b8;
+  font-size: 13px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 5px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 20px;
+}
+
+.modal-content {
+  position: relative;
+  max-width: 92vw;
+  max-height: 92vh;
+  overflow: auto;
+}
+
+.modal-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.modal-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #a3392f;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+}
+
+.winner-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 16px;
+}
+.winner-overlay img {
+  max-width: 60%;
+  max-height: 60%;
+  border-radius: 12px;
+}
+.winner-overlay .winner-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffd54f;
+  text-align: center;
+  padding: 0 12px;
+}
+.winner-overlay .modal-close {
+  top: 8px;
+  right: 8px;
+}
+
+/* Flip the phone sideways -> more width is available, so let the page
+   (and the table image inside it, which is just width:100%) use it. */
+@media (orientation: landscape) {
+  #app {
+    max-width: 900px;
+    padding-bottom: 84px;
+  }
+  .actions {
+    max-width: 900px;
+  }
 }

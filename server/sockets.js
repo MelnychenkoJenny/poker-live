@@ -131,7 +131,7 @@ function attachSockets(io) {
       table.awardPot(Number(data.potIndex), (data.winnerSeats || []).map(Number))
     );
     adminAction('admin:set_blinds', (table, data) => table.setBlinds(Number(data.sb), Number(data.bb)));
-    adminAction('admin:set_level_minutes', (table, data) => table.setLevelMinutes(Number(data.minutes)));
+    adminAction('admin:set_hands_per_level', (table, data) => table.setHandsPerLevel(Number(data.hands)));
     adminAction('admin:set_timer_seconds', (table, data) => table.setTimerSeconds(Number(data.seconds)));
     adminAction('admin:set_default_buyin', (table, data) => table.setDefaultBuyIn(Number(data.amount)));
     adminAction('admin:adjust_chips', (table, data) => table.adjustChips(data.playerId, Number(data.delta)));
@@ -139,6 +139,9 @@ function attachSockets(io) {
       table.adminSeatPlayer(data.playerId, Number(data.seatIndex), Number(data.chips))
     );
     adminAction('admin:kick', (table, data) => table.kickPlayer(data.playerId));
+    adminAction('admin:reset_game', (table) => table.resetGame());
+    adminAction('admin:pause_game', (table) => table.pauseGame());
+    adminAction('admin:resume_game', (table) => table.resumeGame());
     adminAction('admin:set_sitting_out', (table, data) => table.setSittingOut(data.playerId, !!data.sittingOut));
 
     socket.on('disconnect', () => {

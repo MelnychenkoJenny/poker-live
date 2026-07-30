@@ -23,22 +23,38 @@
 
   <div id="view-table" class="hidden">
     <div id="error-banner"></div>
+    <div id="paused-banner" class="paused-banner hidden">⏸ Ведучий поставив гру на паузу</div>
 
     <div id="seat-picker" class="card hidden">
       <h3>Оберіть місце за столом</h3>
       <div id="seat-picker-list" class="row" style="flex-wrap:wrap;"></div>
     </div>
 
-    <div class="table-felt">
-      <div class="pot-line">
-        <span id="pot-amount">0</span> в банку
-        <span class="sub"><span class="badge-stage" id="stage-badge">очікування</span> · Хенд #<span id="hand-number">0</span> · Блайнди <span id="blinds">-</span></span>
+    <div class="table-oval-wrap">
+      <div class="table-oval"></div>
+      <div class="center-info">
+        <div class="pot-line">
+          <span id="pot-amount">0</span> в банку
+          <span class="sub"><span class="badge-stage" id="stage-badge">очікування</span> · Хенд #<span id="hand-number">0</span></span>
+          <span class="sub">Блайнди <span id="blinds">-</span></span>
+          <span class="sub" id="level-progress"></span>
+        </div>
+        <div class="timer-wrap hidden" id="timer-wrap">
+          <div class="timer-circle" id="timer-circle">--</div>
+          <div class="muted">хід: <span id="turn-name">-</span></div>
+        </div>
       </div>
-      <div class="timer-wrap hidden" id="timer-wrap">
-        <div class="timer-circle" id="timer-circle">--</div>
-        <div class="muted">хід гравця: <span id="turn-name">-</span></div>
+      <div class="seats-ring" id="seats-grid"></div>
+      <div id="winner-overlay" class="winner-overlay hidden">
+        <button id="winner-close" class="modal-close" aria-label="Закрити">×</button>
+        <img src="/images/winner.gif" alt="Переможець" />
+        <div class="winner-name" id="winner-name"></div>
       </div>
-      <div class="seats-grid" id="seats-grid"></div>
+      <div id="shuffle-overlay" class="winner-overlay hidden">
+        <button id="shuffle-close" class="modal-close" aria-label="Закрити">×</button>
+        <img src="/images/tasovka.gif" alt="Тасування карт" />
+        <div class="winner-name">Тасування карт...</div>
+      </div>
     </div>
 
     <div class="card">
@@ -56,6 +72,18 @@
       <button id="btn-fold" class="btn-danger">Пас</button>
       <button id="btn-checkcall" class="btn-primary">Чек</button>
       <button id="btn-raise" class="btn-secondary">Підняти</button>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <button id="btn-allin" class="btn-danger">Ва-банк</button>
+    </div>
+  </div>
+
+  <a href="#" id="help-link" class="help-link">Забувся?</a>
+
+  <div id="help-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button id="help-close" class="modal-close" aria-label="Закрити">×</button>
+      <img src="/images/instruction.jpg" alt="Комбінації покеру" />
     </div>
   </div>
 

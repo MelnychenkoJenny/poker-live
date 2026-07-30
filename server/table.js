@@ -2,6 +2,21 @@ const crypto = require('crypto');
 
 const MAX_SEATS = 9;
 
+// Standard poker tournament blind structure (roughly 1.5-2x per step).
+// Auto blind-ups snap forward to the next rung in this table.
+const BLIND_LEVELS = [
+  [5, 10], [10, 20], [15, 30], [25, 50], [50, 100], [75, 150], [100, 200],
+  [150, 300], [200, 400], [300, 600], [400, 800], [500, 1000], [600, 1200],
+  [800, 1600], [1000, 2000], [1500, 3000], [2000, 4000], 
+];
+
+function nextBlindLevel(sb, bb) {
+  for (const [nsb, nbb] of BLIND_LEVELS) {
+    if (nbb > bb) return { sb: nsb, bb: nbb };
+  }
+  return { sb: bb, bb: bb * 2 }; // past the table: just double
+}
+
 function makeRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -22,8 +37,8 @@ class Table {
     this.bigBlind = bigBlind;
     this.timerSeconds = timerSeconds;
     this.defaultBuyIn = defaultBuyIn;
-    this.levelMinutes = 0; // 0 = disabled
-    this.levelDeadline = null;
+    this.handsPerLevel = 8; // 0 = auto blind increases disabled
+    this.handsAtCurrentLevel = 0;
 
     this.dealerButtonSeat = null;
     this.handNumber = 0;
@@ -35,6 +50,8 @@ class Table {
     this.bettingRoundComplete = false;
     this.turnDeadline = null;
     this._turnTimeout = null;
+    this.paused = false;
+    this._pausedRemainingMs = null;
     this.pots = []; // computed at showdown: [{amount, eligibleSeats, awarded, winnerSeats}]
     this.actionLog = [];
 
@@ -83,7 +100,7 @@ class Table {
     player.chips = this.defaultBuyIn;
     player.sittingOut = false;
     this.seats[seatIndex] = playerId;
-    this.log(`${player.name} sits in seat ${seatIndex + 1} with ${player.chips}`);
+    this.log(`${player.name} сідає на місце ${seatIndex + 1} з ${player.chips} фішками`);
     this.touch();
   }
 
@@ -96,7 +113,7 @@ class Table {
     player.chips = chips;
     player.sittingOut = false;
     this.seats[seatIndex] = playerId;
-    this.log(`Admin seats ${player.name} in seat ${seatIndex + 1} with ${chips}`);
+    this.log(`Адмін садить ${player.name} на місце ${seatIndex + 1} з ${chips} фішками`);
     this.touch();
   }
 
@@ -105,7 +122,7 @@ class Table {
     if (!player) return;
     if (player.seat !== null) this.seats[player.seat] = null;
     this.players.delete(playerId);
-    this.log(`${player.name} removed from table`);
+    this.log(`${player.name} видалений(а) зі столу`);
     this.touch();
   }
 
@@ -113,7 +130,7 @@ class Table {
     const player = this.getPlayer(playerId);
     if (!player) throw new Error('Unknown player');
     player.sittingOut = sittingOut;
-    this.log(`${player.name} is ${sittingOut ? 'sitting out' : 'back in'}`);
+    this.log(`${player.name} ${sittingOut ? 'сидить осторонь' : 'повертається в гру'}`);
     this.touch();
   }
 
@@ -121,20 +138,49 @@ class Table {
     const player = this.getPlayer(playerId);
     if (!player) throw new Error('Unknown player');
     player.chips = Math.max(0, player.chips + delta);
-    this.log(`Admin adjusted ${player.name}'s chips by ${delta > 0 ? '+' : ''}${delta} (now ${player.chips})`);
+    this.log(`Адмін змінив(ла) фішки ${player.name} на ${delta > 0 ? '+' : ''}${delta} (тепер ${player.chips})`);
+    this.touch();
+  }
+
+  resetGame() {
+    this._clearTimer();
+    for (const pid of this.seats) {
+      if (!pid) continue;
+      const p = this.players.get(pid);
+      p.chips = this.defaultBuyIn;
+      p.committedThisRound = 0;
+      p.totalCommittedThisHand = 0;
+      p.handStatus = 'idle';
+      p.sittingOut = false;
+      p.seat = null;
+    }
+    this.seats = new Array(MAX_SEATS).fill(null);
+    this.dealerButtonSeat = null;
+    this.handNumber = 0;
+    this.stage = 'waiting';
+    this.currentBetAmount = 0;
+    this.minRaise = this.bigBlind;
+    this.currentTurnSeat = null;
+    this.actingQueue = new Set();
+    this.bettingRoundComplete = false;
+    this.pots = [];
+    this.actionLog = [];
+    this.handsAtCurrentLevel = 0;
+    this.log('Гру скинуто — всіх пересаджено, стеки фішок оновлено');
     this.touch();
   }
 
   setBlinds(sb, bb) {
     this.smallBlind = sb;
     this.bigBlind = bb;
-    this.log(`Blinds set to ${sb}/${bb}`);
+    this.handsAtCurrentLevel = 0;
+    this.log(`Блайнди встановлено на ${sb}/${bb}`);
     this.touch();
   }
 
   setTimerSeconds(seconds) {
     this.timerSeconds = seconds;
-    this.log(`Decision timer set to ${seconds}s`);
+    this.log(`Таймер на хід встановлено на ${seconds} с`);
     this.touch();
   }
 
@@ -143,9 +189,12 @@ class Table {
     this.touch();
   }
 
-  setLevelMinutes(minutes) {
-    this.levelMinutes = minutes;
-    this.levelDeadline = minutes > 0 ? Date.now() + minutes * 60000 : null;
+  setHandsPerLevel(hands) {
+    this.handsPerLevel = Math.max(0, hands);
+    this.handsAtCurrentLevel = 0;
+    this.log(this.handsPerLevel > 0
+      ? `Блайнди підвищуватимуться автоматично кожні ${this.handsPerLevel} хендів`
+      : 'Автоматичне підвищення блайндів вимкнено');
     this.touch();
   }
 
@@ -184,6 +233,15 @@ class Table {
     if (eligible.length < 2) throw new Error('Need at least 2 seated players with chips');
 
     this._clearTimer();
+
+    if (this.handsPerLevel > 0 && this.handsAtCurrentLevel >= this.handsPerLevel) {
+      const next = nextBlindLevel(this.smallBlind, this.bigBlind);
+      this.smallBlind = next.sb;
+      this.bigBlind = next.bb;
+      this.handsAtCurrentLevel = 0;
+      this.log(`Блайнди підвищено до ${next.sb}/${next.bb}`);
+    }
+    this.handsAtCurrentLevel += 1;
 
     // reset all seated players
     for (const pid of this.seats) {
@@ -224,7 +282,7 @@ class Table {
     this.minRaise = this.bigBlind;
     this.actingQueue = new Set(eligible.filter((s) => this.playerAtSeat(s).handStatus === 'active'));
 
-    this.log(`Hand #${this.handNumber} started. Button: seat ${this.dealerButtonSeat + 1}`);
+    this.log(`Хенд #${this.handNumber} розпочато. Дилер: місце ${this.dealerButtonSeat + 1}`);
     this._setTurn(firstToAct, eligible);
     this.touch();
   }
@@ -236,7 +294,7 @@ class Table {
     p.committedThisRound = post;
     p.totalCommittedThisHand = post;
     if (p.chips === 0) p.handStatus = 'all-in';
-    this.log(`${p.name} posts ${post === amount ? amount : `${post} (all-in)`}`);
+    this.log(`${p.name} ставить блайнд ${post === amount ? amount : `${post} (ва-банк)`}`);
   }
 
   callAmount(seat) {
@@ -267,6 +325,7 @@ class Table {
   }
 
   handleAction(playerId, type, amount) {
+    if (this.paused) throw new Error('Game is paused');
     const player = this.getPlayer(playerId);
     if (!player) throw new Error('Unknown player');
     if (player.seat === null || this.currentTurnSeat !== player.seat) throw new Error('Not your turn');
@@ -279,11 +338,11 @@ class Table {
     if (type === 'fold') {
       player.handStatus = 'folded';
       this.actingQueue.delete(player.seat);
-      this.log(`${player.name} folds`);
+      this.log(`${player.name} скидає карти (пас)`);
     } else if (type === 'check') {
       if (call > 0) throw new Error('Cannot check, must call or fold');
       this.actingQueue.delete(player.seat);
-      this.log(`${player.name} checks`);
+      this.log(`${player.name} робить чек`);
     } else if (type === 'call') {
       const paid = Math.min(call, player.chips);
       player.chips -= paid;
@@ -291,7 +350,7 @@ class Table {
       player.totalCommittedThisHand += paid;
       if (player.chips === 0) player.handStatus = 'all-in';
       this.actingQueue.delete(player.seat);
-      this.log(`${player.name} calls ${paid}${player.handStatus === 'all-in' ? ' (all-in)' : ''}`);
+      this.log(`${player.name} відповідає (колл) ${paid}${player.handStatus === 'all-in' ? ' (ва-банк)' : ''}`);
     } else if (type === 'raise') {
       const raiseTo = Math.round(Number(amount));
       if (!Number.isFinite(raiseTo) || raiseTo <= this.currentBetAmount) throw new Error('Raise must exceed current bet');
@@ -312,7 +371,7 @@ class Table {
       this.actingQueue = new Set(
         this.activeNonFolded().filter((s) => s !== player.seat && this.canStillAct(s))
       );
-      this.log(`${player.name} raises to ${raiseTo}${isAllIn ? ' (all-in)' : ''}`);
+      this.log(`${player.name} підвищує (рейз) до ${raiseTo}${isAllIn ? ' (ва-банк)' : ''}`);
     } else {
       throw new Error('Unknown action');
     }
@@ -331,14 +390,20 @@ class Table {
         const winner = this.playerAtSeat(remaining[0]);
         const amount = this.pot();
         winner.chips += amount;
-        this.log(`${winner.name} wins ${amount} (all others folded)`);
+        this.log(`${winner.name} забирає банк ${amount} (усі інші скинули карти)`);
       }
       this.stage = 'hand-over';
       return;
     }
 
-    const canAct = remaining.filter((s) => this.canStillAct(s));
-    if (this.actingQueue.size === 0 || canAct.length <= 1) {
+    // actingQueue only ever holds seats that are still 'active' (raises
+    // requeue active seats only, calls/checks/folds only remove from it),
+    // so an empty queue is by itself sufficient proof nobody owes a
+    // response — no separate "how many can still act" check needed. (That
+    // extra check used to also fire when exactly one active player was
+    // left owing a call on someone's all-in, wrongly closing the round
+    // before they got to act at all.)
+    if (this.actingQueue.size === 0) {
       // betting round is over - wait for admin to reveal next street / showdown
       this.currentTurnSeat = null;
       this.bettingRoundComplete = true;
@@ -356,17 +421,42 @@ class Table {
     this._setTurn(next, eligible);
   }
 
-  _setTurn(seat, eligible) {
+  _setTurn(seat, eligible, durationMs) {
+    const duration = durationMs != null ? durationMs : this.timerSeconds * 1000;
     this.currentTurnSeat = seat;
     this.bettingRoundComplete = false;
-    this.turnDeadline = Date.now() + this.timerSeconds * 1000;
-    this._turnTimeout = setTimeout(() => this._autoAct(seat), this.timerSeconds * 1000 + 250);
+    this.turnDeadline = Date.now() + duration;
+    this._turnTimeout = setTimeout(() => this._autoAct(seat), duration + 250);
   }
 
   _clearTimer() {
     if (this._turnTimeout) clearTimeout(this._turnTimeout);
     this._turnTimeout = null;
     this.turnDeadline = null;
+  }
+
+  pauseGame() {
+    if (this.paused) return;
+    if (this.currentTurnSeat !== null && this.turnDeadline !== null) {
+      this._pausedRemainingMs = Math.max(1000, this.turnDeadline - Date.now());
+    } else {
+      this._pausedRemainingMs = null;
+    }
+    this._clearTimer();
+    this.paused = true;
+    this.log('Ведучий поставив гру на паузу');
+    this.touch();
+  }
+
+  resumeGame() {
+    if (!this.paused) return;
+    this.paused = false;
+    if (this.currentTurnSeat !== null && this._pausedRemainingMs !== null) {
+      this._setTurn(this.currentTurnSeat, null, this._pausedRemainingMs);
+    }
+    this._pausedRemainingMs = null;
+    this.log('Гру відновлено');
+    this.touch();
   }
 
   _autoAct(seat) {
@@ -386,9 +476,6 @@ class Table {
   }
 
   revealNext() {
-    if (!this.bettingRoundComplete && this.stage !== 'preflop') {
-      // allow forcing forward only when round is actually complete
-    }
     const order = ['preflop', 'flop', 'turn', 'river'];
     const idx = order.indexOf(this.stage);
     if (idx === -1 || idx === order.length - 1) throw new Error('Nothing to reveal');
@@ -404,7 +491,8 @@ class Table {
     }
     this.currentBetAmount = 0;
     this.minRaise = this.bigBlind;
-    this.log(`Dealer reveals the ${this.stage}`);
+    const stageNames = { flop: 'флоп', turn: 'терн', river: 'рівер' };
+    this.log(`Дилер відкриває ${stageNames[this.stage] || this.stage}`);
 
     const remaining = this.activeNonFolded();
     const canAct = remaining.filter((s) => this.canStillAct(s));
@@ -429,7 +517,7 @@ class Table {
     this.stage = 'showdown';
     this.pots = this._computePots();
     this.currentTurnSeat = null;
-    this.log('Showdown');
+    this.log('Шоудаун');
     this.touch();
   }
 
@@ -480,7 +568,7 @@ class Table {
         remainder -= 1;
       }
       p.chips += award;
-      this.log(`${p.name} wins ${award} from pot ${potIndex + 1}`);
+      this.log(`${p.name} забирає ${award} з банку ${potIndex + 1}`);
     }
     pot.awarded = true;
     pot.winnerSeats = winnerSeats;
@@ -489,6 +577,20 @@ class Table {
       this.stage = 'hand-over';
     }
     this.touch();
+  }
+
+  // A single seated player holding all the chips (everyone else seated has
+  // busted to 0) means the whole session is over, not just one hand.
+  _findGameWinner() {
+    // Only meaningful once a hand is fully settled — mid-hand, an all-in
+    // player's stack shows as 0 (it's all in the pot) even though they
+    // might win it right back at showdown, so checking chip counts while
+    // a hand is still live would wrongly call the game over.
+    if (this.stage !== 'hand-over' && this.stage !== 'waiting') return null;
+    const seated = [...this.players.values()].filter((p) => p.seat !== null);
+    if (seated.length < 2) return null;
+    const withChips = seated.filter((p) => p.chips > 0);
+    return withChips.length === 1 ? withChips[0].name : null;
   }
 
   // ---------- serialization ----------
@@ -527,11 +629,13 @@ class Table {
       turnDeadline: this.turnDeadline,
       timerSeconds: this.timerSeconds,
       bettingRoundComplete: this.bettingRoundComplete,
+      paused: this.paused,
+      winnerName: this._findGameWinner(),
       smallBlind: this.smallBlind,
       bigBlind: this.bigBlind,
       defaultBuyIn: this.defaultBuyIn,
-      levelMinutes: this.levelMinutes,
-      levelDeadline: this.levelDeadline,
+      handsPerLevel: this.handsPerLevel,
+      handsAtCurrentLevel: this.handsAtCurrentLevel,
       pots: this.pots,
       actionLog: this.actionLog.slice(0, 15),
       unseatedPlayers,

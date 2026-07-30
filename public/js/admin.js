@@ -88,15 +88,27 @@
   $('btn-start-hand').addEventListener('click', () => adminEmit('admin:start_hand'));
   $('btn-reveal-next').addEventListener('click', () => adminEmit('admin:reveal_next'));
   $('btn-showdown').addEventListener('click', () => adminEmit('admin:start_showdown'));
+  $('btn-pause-toggle').addEventListener('click', () => {
+    adminEmit(lastState && lastState.paused ? 'admin:resume_game' : 'admin:pause_game');
+  });
 
   $('btn-set-blinds').addEventListener('click', () => {
     adminEmit('admin:set_blinds', { sb: Number($('set-sb').value), bb: Number($('set-bb').value) });
+  });
+  $('btn-set-hands-per-level').addEventListener('click', () => {
+    adminEmit('admin:set_hands_per_level', { hands: Number($('set-hands-per-level').value) });
   });
   $('btn-set-timer').addEventListener('click', () => {
     adminEmit('admin:set_timer_seconds', { seconds: Number($('set-timer').value) });
   });
   $('btn-set-buyin').addEventListener('click', () => {
     adminEmit('admin:set_default_buyin', { amount: Number($('set-buyin').value) });
+  });
+
+  $('btn-reset-game').addEventListener('click', () => {
+    if (confirm('Точно завершити гру? Усі гравці будуть пересаджені (місця звільняться), стеки фішок скинуться до стартового значення, хенд #0. Це не можна скасувати.')) {
+      adminEmit('admin:reset_game');
+    }
   });
 
   // ---------- render ----------
@@ -119,6 +131,11 @@
     if (document.activeElement.id !== 'set-bb') $('set-bb').value = state.bigBlind;
     if (document.activeElement.id !== 'set-timer') $('set-timer').value = state.timerSeconds;
     if (document.activeElement.id !== 'set-buyin') $('set-buyin').value = state.defaultBuyIn;
+    if (document.activeElement.id !== 'set-hands-per-level') $('set-hands-per-level').value = state.handsPerLevel;
+
+    $('level-progress').textContent = state.handsPerLevel > 0
+      ? `Підвищення блайндів через ${Math.max(0, state.handsPerLevel - state.handsAtCurrentLevel)} хенд(и/ів)`
+      : 'Автопідвищення блайндів вимкнено';
 
     const canStart = state.stage === 'waiting' || state.stage === 'hand-over';
     $('btn-start-hand').disabled = !canStart;
@@ -130,6 +147,9 @@
     $('btn-reveal-next').textContent = nextLabel || 'Відкрити наступну карту';
 
     $('btn-showdown').disabled = !(state.stage === 'river' && state.bettingRoundComplete);
+
+    $('btn-pause-toggle').textContent = state.paused ? '▶ Відновити гру' : '⏸ Пауза';
+    $('btn-pause-toggle').className = state.paused ? 'btn-primary' : 'btn-secondary';
 
     renderPots(state);
     renderSeats(state);

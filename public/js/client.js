@@ -25,6 +25,37 @@
 
   function storageKey(code) { return `poker_player_${code}`; }
 
+  // ---------- help modal ----------
+  const helpLink = $('help-link');
+  const helpModal = $('help-modal');
+  helpLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    helpModal.classList.remove('hidden');
+  });
+  $('help-close').addEventListener('click', () => helpModal.classList.add('hidden'));
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) helpModal.classList.add('hidden');
+  });
+
+  // ---------- winner overlay ----------
+  // Shown when one player has busted everyone else (the whole session is
+  // over, not just a hand). Dismissible, but only reappears if a *new*
+  // winner shows up later (e.g. after the dealer resets the game).
+  let dismissedWinner = null;
+  $('winner-close').addEventListener('click', () => {
+    dismissedWinner = lastState && lastState.winnerName;
+    $('winner-overlay').classList.add('hidden');
+  });
+
+  // ---------- shuffle overlay ----------
+  // Shown between hands (no hand in progress yet) — dismissible, but
+  // resets once a new hand actually starts so it shows again next gap.
+  let shuffleDismissed = false;
+  $('shuffle-close').addEventListener('click', () => {
+    shuffleDismissed = true;
+    $('shuffle-overlay').classList.add('hidden');
+  });
+
   // ---------- join ----------
 
   (function prefillFromQuery() {
@@ -113,6 +144,19 @@
     $('hand-number').textContent = state.handNumber;
     $('stage-badge').textContent = STAGE_LABELS[state.stage] || state.stage;
     $('blinds').textContent = `${state.smallBlind}/${state.bigBlind}`;
+    $('level-progress').textContent = state.handsPerLevel > 0
+      ? `· ще ${Math.max(0, state.handsPerLevel - state.handsAtCurrentLevel)} хенд(и/ів) до підвищення`
+      : '';
+    $('paused-banner').classList.toggle('hidden', !state.paused);
+
+    const showWinner = !!state.winnerName && state.winnerName !== dismissedWinner;
+    $('winner-overlay').classList.toggle('hidden', !showWinner);
+    if (showWinner) $('winner-name').textContent = `${state.winnerName} забирає весь банк! 🏆`;
+    if (!state.winnerName) dismissedWinner = null; // reset once the game moves past that win
+
+    const betweenHands = state.stage === 'waiting' || state.stage === 'hand-over';
+    if (!betweenHands) shuffleDismissed = false; // reset so it shows again next gap
+    $('shuffle-overlay').classList.toggle('hidden', showWinner || !betweenHands || shuffleDismissed);
 
     renderSeatPicker(state);
     renderSeats(state);
@@ -121,15 +165,41 @@
     renderActions(state);
   }
 
+  // Plain CSS oval table (see .table-oval in style.css) — no image, so
+  // seats are just placed evenly around an ellipse by simple trigonometry.
+  const TOTAL_SEATS = 9;
+  // Same radius on both axes: since left% is relative to the container's
+  // width and top% to its height, an equal radius already traces an
+  // ellipse matching the container's own (wide) aspect ratio. Kept small
+  // enough that a seat box (up to ~8% half-width) never crosses the edge.
+  const RADIUS = 40;
+
+  function seatPosition(index) {
+    const angle = -Math.PI / 2 + index * ((2 * Math.PI) / TOTAL_SEATS);
+    const x = 50 + RADIUS * Math.cos(angle);
+    const y = 50 + RADIUS * Math.sin(angle);
+    return { left: `${x}%`, top: `${y}%` };
+  }
+
   function renderSeats(state) {
-    const grid = $('seats-grid');
-    grid.innerHTML = '';
+    const ring = $('seats-grid');
+    ring.innerHTML = '';
+    const gameStarted = state.handNumber > 0;
     state.seats.forEach((s) => {
+      if (s.empty && gameStarted) return; // once the game is running, leave empty seats blank
+
+      const pos = document.createElement('div');
+      pos.className = 'seat-pos';
+      const { left, top } = seatPosition(s.seat);
+      pos.style.left = left;
+      pos.style.top = top;
+
       const div = document.createElement('div');
       if (s.empty) {
         div.className = 'seat empty';
-        div.textContent = `Місце ${s.seat + 1} вільне`;
-        grid.appendChild(div);
+        div.textContent = `Місце ${s.seat + 1}`;
+        pos.appendChild(div);
+        ring.appendChild(pos);
         return;
       }
       const classes = ['seat'];
@@ -141,15 +211,16 @@
       const isButton = s.seat === state.dealerButtonSeat;
       div.innerHTML = `
         ${isButton ? '<div class="button-chip">D</div>' : ''}
-        <div class="name">${escapeHtml(s.name)} ${s.isYou ? '(ви)' : ''}
+        <div class="name">${escapeHtml(s.name)}
           ${STATUS_LABELS[s.handStatus] ? `<span class="tag">${STATUS_LABELS[s.handStatus]}</span>` : ''}
           ${s.sittingOut ? '<span class="tag">не грає</span>' : ''}
         </div>
-        <div class="chips">Фішки: ${s.chips}</div>
+        <div class="chips">${s.chips}</div>
         ${s.committedThisRound > 0 ? `<div class="bet">Ставка: ${s.committedThisRound}</div>` : ''}
         ${!s.connected ? '<div class="disconnected">офлайн</div>' : ''}
       `;
-      grid.appendChild(div);
+      pos.appendChild(div);
+      ring.appendChild(pos);
     });
   }
 
@@ -184,7 +255,7 @@
     const myTurn = me && !me.empty && state.currentTurnSeat === me.seat &&
       ['preflop', 'flop', 'turn', 'river'].includes(state.stage);
 
-    if (!myTurn) {
+    if (!myTurn || state.paused) {
       actionsBar.classList.add('hidden');
       return;
     }
@@ -209,6 +280,12 @@
   }
 
   $('btn-fold').addEventListener('click', () => {
+    const me = findMe(lastState);
+    const callAmount = me ? Math.max(0, lastState.currentBetAmount - me.committedThisRound) : 0;
+    if (callAmount === 0) {
+      const ok = confirm('Секунду... ставок немає, чек безкоштовний — а ти скидаєш карти? Це трохи нерозумний вчинок. Точно пасуєш?');
+      if (!ok) return;
+    }
     socket.emit('player:action', { type: 'fold' }, (res) => { if (!res.ok) showError(res.error); });
   });
 
@@ -229,5 +306,13 @@
       if (!res.ok) showError(res.error);
       else $('raise-box').classList.add('hidden');
     });
+  });
+
+  $('btn-allin').addEventListener('click', () => {
+    const me = findMe(lastState);
+    if (!me) return;
+    const shoveTo = me.committedThisRound + me.chips;
+    const type = shoveTo > lastState.currentBetAmount ? 'raise' : 'call';
+    socket.emit('player:action', { type, amount: shoveTo }, (res) => { if (!res.ok) showError(res.error); });
   });
 })();
