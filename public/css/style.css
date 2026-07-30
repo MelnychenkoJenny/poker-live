@@ -207,6 +207,26 @@ button:disabled {
   color: #ffd54f;
   margin-top: 2px;
 }
+.seat .win-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd54f;
+  margin-top: 3px;
+  animation: win-pop 0.4s ease-out;
+}
+.seat .win-badge img {
+  width: 16px;
+  height: 16px;
+}
+@keyframes win-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
 .seat .tag {
   font-size: 9px;
   background: #444;

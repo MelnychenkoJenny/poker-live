@@ -50,7 +50,12 @@
   // ---------- shuffle overlay ----------
   // Shown between hands (no hand in progress yet) — dismissible, but
   // resets once a new hand actually starts so it shows again next gap.
+  // Delayed after a hand ends (see handOverShuffleReady in render()) so
+  // players see the win badge on the table before it gets covered up.
   let shuffleDismissed = false;
+  let previousStage = null;
+  let handOverShuffleReady = false;
+  let handOverShuffleTimer = null;
   $('shuffle-close').addEventListener('click', () => {
     shuffleDismissed = true;
     $('shuffle-overlay').classList.add('hidden');
@@ -154,9 +159,26 @@
     if (showWinner) $('winner-name').textContent = `${state.winnerName} забирає весь банк! 🏆`;
     if (!state.winnerName) dismissedWinner = null; // reset once the game moves past that win
 
+    // When a hand just ended, let players see who won (the chip badge on
+    // the seat) for a few seconds before the shuffle gif covers the table.
+    const justEnteredHandOver = state.stage === 'hand-over' && previousStage !== 'hand-over';
+    if (justEnteredHandOver) {
+      handOverShuffleReady = false;
+      clearTimeout(handOverShuffleTimer);
+      handOverShuffleTimer = setTimeout(() => {
+        handOverShuffleReady = true;
+        if (lastState && lastState.stage === 'hand-over' && !shuffleDismissed) {
+          $('shuffle-overlay').classList.remove('hidden');
+        }
+      }, 3500);
+    }
+    if (state.stage !== 'hand-over') handOverShuffleReady = false;
+    previousStage = state.stage;
+
     const betweenHands = state.stage === 'waiting' || state.stage === 'hand-over';
     if (!betweenHands) shuffleDismissed = false; // reset so it shows again next gap
-    $('shuffle-overlay').classList.toggle('hidden', showWinner || !betweenHands || shuffleDismissed);
+    const shuffleAllowedNow = state.stage === 'waiting' || (state.stage === 'hand-over' && handOverShuffleReady);
+    $('shuffle-overlay').classList.toggle('hidden', showWinner || shuffleDismissed || !shuffleAllowedNow);
 
     renderSeatPicker(state);
     renderSeats(state);
@@ -209,6 +231,7 @@
       div.className = classes.join(' ');
 
       const isButton = s.seat === state.dealerButtonSeat;
+      const win = state.lastHandWinners.find((w) => w.seat === s.seat);
       div.innerHTML = `
         ${isButton ? '<div class="button-chip">D</div>' : ''}
         <div class="name">${escapeHtml(s.name)}
@@ -217,6 +240,7 @@
         </div>
         <div class="chips">${s.chips}</div>
         ${s.committedThisRound > 0 ? `<div class="bet">Ставка: ${s.committedThisRound}</div>` : ''}
+        ${win ? `<div class="win-badge"><img src="/images/fishka.png" alt="" /> +${win.amount}</div>` : ''}
         ${!s.connected ? '<div class="disconnected">офлайн</div>' : ''}
       `;
       pos.appendChild(div);

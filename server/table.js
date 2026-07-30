@@ -54,8 +54,15 @@ class Table {
     this._pausedRemainingMs = null;
     this.pots = []; // computed at showdown: [{amount, eligibleSeats, awarded, winnerSeats}]
     this.actionLog = [];
+    this.lastHandWinners = []; // [{seat, name, amount}] for the hand that just ended
 
     this.lastActivityAt = Date.now();
+  }
+
+  _recordWin(seat, name, amount) {
+    const existing = this.lastHandWinners.find((w) => w.seat === seat);
+    if (existing) existing.amount += amount;
+    else this.lastHandWinners.push({ seat, name, amount });
   }
 
   log(text) {
@@ -164,6 +171,7 @@ class Table {
     this.actingQueue = new Set();
     this.bettingRoundComplete = false;
     this.pots = [];
+    this.lastHandWinners = [];
     this.actionLog = [];
     this.handsAtCurrentLevel = 0;
     this.log('Гру скинуто — всіх пересаджено, стеки фішок оновлено');
@@ -262,6 +270,7 @@ class Table {
     this.handNumber += 1;
     this.stage = 'preflop';
     this.pots = [];
+    this.lastHandWinners = [];
 
     const heads_up = eligible.length === 2;
     let sbSeat, bbSeat, firstToAct;
@@ -396,6 +405,7 @@ class Table {
         const winner = this.playerAtSeat(remaining[0]);
         const amount = this.pot();
         winner.chips += amount;
+        this._recordWin(remaining[0], winner.name, amount);
         this.log(`${winner.name} забирає банк ${amount} (усі інші скинули карти)`);
       }
       this.stage = 'hand-over';
@@ -574,6 +584,7 @@ class Table {
         remainder -= 1;
       }
       p.chips += award;
+      this._recordWin(seat, p.name, award);
       this.log(`${p.name} забирає ${award} з банку ${potIndex + 1}`);
     }
     pot.awarded = true;
@@ -644,6 +655,7 @@ class Table {
       handsAtCurrentLevel: this.handsAtCurrentLevel,
       pots: this.pots,
       actionLog: this.actionLog.slice(0, 15),
+      lastHandWinners: this.lastHandWinners,
       unseatedPlayers,
       you: forPlayerId || null,
     };
