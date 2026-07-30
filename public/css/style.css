@@ -217,8 +217,8 @@ button:disabled {
   animation: win-pop 0.4s ease-out;
 }
 .win-badge-float img {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: auto;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
 }
 .win-badge-float span {
