@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Poker Live — панель ведучого</title>
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  #app { max-width: 640px; padding-bottom: 40px; }
+  .seat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.08); gap: 8px; }
+  .seat-row .info { flex: 1; }
+  .pot-block { border: 1px solid #274a3a; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .winner-pick label { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; font-size: 14px; }
+  .share-box { background: #0f2e1f; padding: 10px; border-radius: 8px; font-size: 14px; word-break: break-all; }
+  .small-btn { padding: 6px 10px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="view-setup" class="card">
+    <h1>♠ Панель ведучого</h1>
+
+    <div id="create-block">
+      <h3>Створити нову кімнату</h3>
+      <label>Малий блайнд</label>
+      <input id="cfg-sb" type="number" value="5" />
+      <label>Великий блайнд</label>
+      <input id="cfg-bb" type="number" value="10" />
+      <label>Стартовий стек фішок</label>
+      <input id="cfg-buyin" type="number" value="1000" />
+      <label>Таймер на хід (сек)</label>
+      <input id="cfg-timer" type="number" value="30" />
+      <button id="btn-create" class="btn-primary btn-block">Створити кімнату</button>
+    </div>
+
+    <hr style="border-color:#274a3a; margin:16px 0;" />
+
+    <h3>Або підключитись до існуючої</h3>
+    <label>Код кімнати</label>
+    <input id="reattach-code" maxlength="4" />
+    <label>Admin-токен</label>
+    <input id="reattach-token" />
+    <button id="btn-reattach" class="btn-secondary btn-block">Підключитись</button>
+    <div id="setup-error"></div>
+  </div>
+
+  <div id="view-panel" class="hidden">
+    <div id="error-banner"></div>
+
+    <div class="card">
+      <h3>Кімната <span id="room-code"></span></h3>
+      <div class="share-box">Посилання для гравців: <span id="share-link"></span></div>
+      <p class="muted">Admin-токен (не показуйте гравцям, збережіть для повторного входу): <code id="admin-token-display"></code></p>
+    </div>
+
+    <div class="card">
+      <div class="pot-line">Банк: <span id="pot-amount">0</span></div>
+      <p class="muted" style="text-align:center;">
+        <span class="badge-stage" id="stage-badge">-</span> · Хенд #<span id="hand-number">0</span> ·
+        Блайнди <span id="blinds">-</span> · Хід: <span id="turn-name">-</span>
+      </p>
+      <div class="row">
+        <button id="btn-start-hand" class="btn-primary">Почати хенд</button>
+        <button id="btn-reveal-next" class="btn-secondary">Відкрити наступну карту</button>
+        <button id="btn-showdown" class="btn-secondary">Шоудаун</button>
+      </div>
+    </div>
+
+    <div id="pots-block" class="card hidden">
+      <h3>Розподіл банку</h3>
+      <div id="pots-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Місця за столом</h3>
+      <div id="seats-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Гравці без місця</h3>
+      <div id="unseated-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Налаштування</h3>
+      <label>Блайнди (SB / BB)</label>
+      <div class="row">
+        <input id="set-sb" type="number" />
+        <input id="set-bb" type="number" />
+        <button id="btn-set-blinds" class="btn-secondary">Змінити</button>
+      </div>
+      <label>Таймер на хід (сек)</label>
+      <div class="row">
+        <input id="set-timer" type="number" />
+        <button id="btn-set-timer" class="btn-secondary">Змінити</button>
+      </div>
+      <label>Стартовий стек для нових гравців</label>
+      <div class="row">
+        <input id="set-buyin" type="number" />
+        <button id="btn-set-buyin" class="btn-secondary">Змінити</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Історія дій</h3>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>

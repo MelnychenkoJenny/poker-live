@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Poker Live — стіл</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div id="app">
+
+  <div id="view-join" class="card">
+    <h1>♠ Poker Live</h1>
+    <p class="muted">Введіть код кімнати, який дав ведучий, та своє ім'я.</p>
+    <div id="join-error"></div>
+    <label>Код кімнати</label>
+    <input id="join-code" maxlength="4" autocapitalize="characters" placeholder="ABCD" />
+    <label>Ваше ім'я</label>
+    <input id="join-name" maxlength="24" placeholder="Ім'я" />
+    <button id="join-btn" class="btn-primary btn-block">Приєднатись</button>
+    <p class="muted" style="margin-top:16px;">Ведучий гри? <a class="admin-link" href="/admin.html">Відкрити панель керування</a></p>
+  </div>
+
+  <div id="view-table" class="hidden">
+    <div id="error-banner"></div>
+
+    <div id="seat-picker" class="card hidden">
+      <h3>Оберіть місце за столом</h3>
+      <div id="seat-picker-list" class="row" style="flex-wrap:wrap;"></div>
+    </div>
+
+    <div class="table-felt">
+      <div class="pot-line">
+        <span id="pot-amount">0</span> в банку
+        <span class="sub"><span class="badge-stage" id="stage-badge">очікування</span> · Хенд #<span id="hand-number">0</span> · Блайнди <span id="blinds">-</span></span>
+      </div>
+      <div class="timer-wrap hidden" id="timer-wrap">
+        <div class="timer-circle" id="timer-circle">--</div>
+        <div class="muted">хід гравця: <span id="turn-name">-</span></div>
+      </div>
+      <div class="seats-grid" id="seats-grid"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:6px;">Історія дій</h3>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <div class="actions hidden" id="actions-bar">
+    <div class="raise-box hidden" id="raise-box">
+      <input id="raise-amount" type="number" inputmode="numeric" />
+      <button id="raise-confirm" class="btn-secondary">Підняти</button>
+    </div>
+    <div class="row">
+      <button id="btn-fold" class="btn-danger">Пас</button>
+      <button id="btn-checkcall" class="btn-primary">Чек</button>
+      <button id="btn-raise" class="btn-secondary">Підняти</button>
+    </div>
+  </div>
+
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/client.js"></script>
+</body>
+</html>
