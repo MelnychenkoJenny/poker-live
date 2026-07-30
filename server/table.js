@@ -304,6 +304,12 @@ class Table {
   }
 
   pot() {
+    // Once a hand is over, every pot (or the instant fold-win amount) has
+    // already been added to the winner's chips — totalCommittedThisHand
+    // just hasn't been reset yet (that happens at the next startHand()).
+    // Showing that stale total here would make it look like the money
+    // never went anywhere even though it already did.
+    if (this.stage === 'hand-over') return 0;
     let total = 0;
     for (const p of this.players.values()) total += p.totalCommittedThisHand;
     return total;
