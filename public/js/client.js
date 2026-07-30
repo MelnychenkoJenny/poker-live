@@ -196,10 +196,11 @@
   // enough that a seat box (up to ~8% half-width) never crosses the edge.
   const RADIUS = 40;
 
-  function seatPosition(index) {
+  function seatPosition(index, radius) {
     const angle = -Math.PI / 2 + index * ((2 * Math.PI) / TOTAL_SEATS);
-    const x = 50 + RADIUS * Math.cos(angle);
-    const y = 50 + RADIUS * Math.sin(angle);
+    const r = radius != null ? radius : RADIUS;
+    const x = 50 + r * Math.cos(angle);
+    const y = 50 + r * Math.sin(angle);
     return { left: `${x}%`, top: `${y}%` };
   }
 
@@ -240,11 +241,23 @@
         </div>
         <div class="chips">${s.chips}</div>
         ${s.committedThisRound > 0 ? `<div class="bet">Ставка: ${s.committedThisRound}</div>` : ''}
-        ${win ? `<div class="win-badge"><img src="/images/fishka.png" alt="" /> +${win.amount}</div>` : ''}
         ${!s.connected ? '<div class="disconnected">офлайн</div>' : ''}
       `;
       pos.appendChild(div);
       ring.appendChild(pos);
+
+      if (win) {
+        // Floats between the seat and the table's center (not squeezed
+        // into the small seat card), so it reads clearly as "money moved
+        // toward the middle of the table, from that player".
+        const badgePos = document.createElement('div');
+        badgePos.className = 'seat-pos win-badge-float';
+        const { left: bLeft, top: bTop } = seatPosition(s.seat, RADIUS * 0.6);
+        badgePos.style.left = bLeft;
+        badgePos.style.top = bTop;
+        badgePos.innerHTML = `<img src="/images/fishka.png" alt="" /><span>+${win.amount}</span>`;
+        ring.appendChild(badgePos);
+      }
     });
   }
 

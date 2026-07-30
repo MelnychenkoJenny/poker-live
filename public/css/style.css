@@ -207,20 +207,28 @@ button:disabled {
   color: #ffd54f;
   margin-top: 2px;
 }
-.seat .win-badge {
+.win-badge-float {
+  z-index: 6;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-size: 12px;
-  font-weight: 800;
-  color: #ffd54f;
-  margin-top: 3px;
+  gap: 2px;
+  pointer-events: none;
   animation: win-pop 0.4s ease-out;
 }
-.seat .win-badge img {
-  width: 16px;
-  height: 16px;
+.win-badge-float img {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+.win-badge-float span {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffd54f;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
 }
 @keyframes win-pop {
   0% { transform: scale(0.4); opacity: 0; }
