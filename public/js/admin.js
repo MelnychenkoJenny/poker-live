@@ -32,8 +32,27 @@
     $('admin-token-display').textContent = token;
     const link = `${location.origin}/?code=${code}`;
     $('share-link').innerHTML = `<a href="${link}" style="color:#9fd8b8" target="_blank">${link}</a>`;
+    setReady(true);
     render(table);
   }
+
+  // ---------- connection state ----------
+  // Every socket reconnect (Wi-Fi blip, laptop sleep, backgrounded tab) is
+  // a brand-new connection on the server that starts out unauthenticated
+  // until admin_auth round-trips again. Clicking a control in that window
+  // used to fail with a confusing "Not authorized" — now the controls are
+  // just disabled and a banner shows until re-auth actually completes.
+  let isReady = false;
+  function setReady(ready) {
+    isReady = ready;
+    $('reconnect-banner').classList.toggle('hidden', ready);
+    viewPanel.querySelectorAll('button').forEach((btn) => { btn.disabled = !ready; });
+    if (ready && lastState) render(lastState); // restore per-state disabled/enabled buttons
+  }
+
+  socket.on('disconnect', () => {
+    if (roomCode) setReady(false);
+  });
 
   // ---------- create / reattach ----------
 
@@ -62,7 +81,10 @@
 
   socket.on('connect', () => {
     if (roomCode && adminToken) {
-      socket.emit('admin_auth', { code: roomCode, adminToken }, (res) => { if (res.ok) render(res.table); });
+      socket.emit('admin_auth', { code: roomCode, adminToken }, (res) => {
+        if (res.ok) { setReady(true); render(res.table); }
+        else showError(res.error);
+      });
       return;
     }
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -80,6 +102,7 @@
   socket.on('error_message', (msg) => showError(msg));
 
   function adminEmit(event, data) {
+    if (!isReady) return; // belt-and-suspenders: buttons are disabled too, but guard direct calls as well
     socket.emit(event, data || {}, (res) => { if (!res.ok) showError(res.error); });
   }
 
