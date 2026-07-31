@@ -1,96 +1,102 @@
 # Poker Live
 
-Компаньйон-сайт для живої гри в покер. Карти роздаються реально, руками — сайт
-бере на себе все інше: місця за столом, фішки, банк, кола ставок (пас/чек/колл/
-рейз), блайнди, фішку дилера і таймер на прийняття рішення.
+**Live site: [https://poker-live.onrender.com](https://poker-live.onrender.com)**
 
-Одна людина (ведучий/дилер) керує грою через окрему адмін-панель: починає
-хенд, відкриває флоп/терн/рівер (коли реально відкриває карти на столі), і
-після шоудауну вручну обирає переможця(ів) банку. Гравці зі своїх телефонів
-лише бачать стіл і тиснуть свої дії у свій хід.
+A companion site for a live poker game where cards are dealt for real, by
+hand. The site handles everything else: seating, chip stacks, the pot,
+betting rounds (fold/check/call/raise), blinds, the dealer button, and a
+per-player decision timer.
 
-## Запуск локально
+One person (the dealer/host) runs the game from a separate admin panel:
+starts the hand, reveals the flop/turn/river (whenever they actually flip
+the real cards on the table), and manually picks the pot winner(s) after
+showdown. Players just watch the table on their phones and tap their action
+on their turn.
+
+> ⚠️ The free Render instance goes to sleep after ~15 min of no traffic and
+> takes 30–50s to wake up on the next request — open the link yourself a
+> minute before the game starts so it has time to spin up.
+
+## Running locally
 
 ```bash
 npm install
 npm start
 ```
 
-Сайт підніметься на `http://localhost:3000`.
+The site comes up on `http://localhost:3000`.
 
-- **Гравці** відкривають `http://localhost:3000/` (або спільний лінк з кодом
-  кімнати — див. нижче), вводять код кімнати та ім'я.
-- **Ведучий** відкриває `http://localhost:3000/admin.html`, створює кімнату
-  (блайнди, стартовий стек, таймер), і отримує код кімнати + посилання для
-  гравців.
+- **Players** open `http://localhost:3000/` (or a shared link with the room
+  code already in it — see below), enter the room code and their name.
+- **The host** opens `http://localhost:3000/admin.html`, creates a room
+  (blinds, starting stack, timer), and gets a room code + a link for
+  players.
 
-Якщо граєте по одному Wi-Fi без деплою на хостинг — знайдіть локальну IP-адресу
-ноутбука (`ipconfig getifaddr en0` на Mac) і діліться `http://<IP>:3000`
-замість `localhost`.
+Playing on one Wi-Fi network without deploying anywhere? Find your laptop's
+local IP (`ipconfig getifaddr en0` on a Mac) and share `http://<IP>:3000`
+instead of `localhost`.
 
-## Як грати
+## How to play
 
-1. Ведучий відкриває `/admin.html`, створює кімнату — отримує код (наприклад
-   `A7K2`) і admin-токен (зберігається в браузері автоматично для
-   перепідключення).
-2. Ведучий надсилає гравцям посилання виду `https://.../?code=A7K2` (код вже
-   підставиться) — гравці вводять своє ім'я і приєднуються.
-3. Гравці самі обирають вільне місце за столом — одразу отримують стартовий
-   стек фішок.
-4. Ведучий тисне **«Почати хенд»** — блайнди списуються автоматично, фішка
-   дилера виставляється, перший гравець отримує хід і таймер.
-5. Гравці по черзі тиснуть Пас / Чек-Колл / Рейз на своїх телефонах. Коли
-   коло ставок завершено, кнопка **«Відкрити флоп/терн/рівер»** стає активною
-   — ведучий тисне її одночасно з тим, як реально відкриває карти на столі.
-6. Після ставок на рівері ведучий тисне **«Шоудаун»**, дивиться на реальні
-   карти гравців і вручну обирає переможця(ів) кожного банку (основний +
-   побічні, якщо хтось ставив ва-банк).
-7. Тисне **«Наступний хенд»** — фішка дилера рухається далі, все скидається.
+1. The host opens `/admin.html`, creates a room — gets a code (e.g. `A7K2`)
+   and an admin token (saved in the browser automatically, for
+   reconnecting).
+2. The host sends players a link like `https://.../?code=A7K2` (the code
+   fills itself in) — players enter their name and join.
+3. Players pick their own open seat at the table — they get the starting
+   chip stack immediately.
+4. The host clicks **"Start Hand"** — blinds are posted automatically, the
+   dealer button is placed, and the first player gets the turn and a timer.
+5. Players take turns tapping Fold / Check-Call / Raise on their phones.
+   Once the betting round is done, the **"Reveal flop/turn/river"** button
+   lights up — the host clicks it at the same moment they actually flip the
+   real cards on the table.
+6. After river betting, the host clicks **"Showdown"**, looks at the real
+   cards, and manually picks the winner(s) of each pot (main pot + side
+   pots if anyone went all-in).
+7. Clicks **"Next Hand"** — the dealer button moves on, everything resets.
 
-Блайнди, таймер на хід і стартовий стек можна змінювати в будь-який момент у
-секції «Налаштування» адмін-панелі. Блайнди підвищуються автоматично кожні N
-хендів за стандартною турнірною прогресією (5/10 → 10/20 → 15/30 → 25/50 →
-...) — кількість хендів на рівень також налаштовується там (0 = вимкнути
-автопідвищення).
+Blinds, the decision timer, and the starting stack can all be changed at any
+time in the admin panel's "Settings" section. Blinds increase automatically
+every N hands following a standard tournament progression (5/10 → 10/20 →
+15/30 → 25/50 → ...) — the number of hands per level is also configurable
+there (0 disables auto-increases).
 
-Кнопка «Завершити гру та почати заново» в «Небезпечній зоні» пересаджує всіх
-гравців (місця звільняються, можна сісти по-новому), скидає стеки фішок до
-стартового значення і номер хенду — зручно почати нову гру в тій самій
-кімнаті з тим самим кодом, не створюючи нову.
+The **"End Game & Restart"** button in the "Danger Zone" unseats everyone
+(seats free up so people can sit somewhere new), resets chip stacks to the
+starting amount, and resets the hand number — handy for starting a fresh
+game in the same room with the same code, without creating a new one.
 
-## Додатково
+## Extras
 
-- **Пауза** — кнопка «⏸ Пауза» на панелі ведучого зупиняє таймер для всіх
-  (наприклад, щось треба обговорити посеред чийогось ходу) і блокує дії
-  гравців. «▶ Відновити гру» продовжує з тим самим часом, що лишався.
-- **«Забувся?»** — посилання у правому верхньому куті сторінки гравця
-  відкриває картинку з таблицею комбінацій покеру (`public/images/instruction.jpg`).
-- Між хендами (поки триває «тасування карт») і коли гру повністю виграно
-  (всі інші гравці за столом на нулі) на столі з'являються анімовані гіфки
-  (`public/images/tasovka.gif`, `public/images/winner.gif`) — обидві можна
-  закрити хрестиком.
-- Якщо гравець намагається скинути карти (пас), хоча ставок немає і чек
-  безкоштовний — з'являється жартівливе підтвердження, щоб уникнути
-  випадкового фолду.
+- **Pause** — the "⏸ Pause" button on the host's panel freezes the timer for
+  everyone (e.g. something needs discussing mid-turn) and blocks player
+  actions. "▶ Resume" continues with whatever time was left.
+- **"Forgot?"** — a link in the top-right corner of the player page opens a
+  poker hand-rankings image (`public/images/instruction.jpg`).
+- Between hands (while "shuffling") and when the game is fully won (every
+  other player at the table is down to zero), animated gifs pop up over the
+  table (`public/images/tasovka.gif`, `public/images/winner.gif`) — both
+  dismissible with the × button. After a hand ends, a small chip badge
+  ("+amount") also floats near the winning seat before the shuffle gif
+  covers the table.
+- If a player tries to fold when there's nothing to call (checking is
+  free), a joking confirmation pops up to catch accidental folds.
 
-## Технічні деталі
+## Technical details
 
-- Бекенд: Node.js + Express + Socket.IO, стан гри тримається в пам'яті
-  сервера (без бази даних) — це нормально для однієї ігрової сесії, але
-  означає, що перезапуск сервера скидає всі кімнати.
-- Фронтенд: звичайний HTML/CSS/JS, без збірки та фреймворків.
-- Побічні банки (side pots) для ва-банк рахуються автоматично.
+- Backend: Node.js + Express + Socket.IO. Game state lives in server
+  memory (no database) — that's fine for a single game session, but it
+  means restarting the server wipes every room.
+- Frontend: plain HTML/CSS/JS, no build step, no framework.
+- Side pots for all-ins are computed automatically.
 
-## Деплой на Render.com
+## Deploying to Render.com
 
-1. Запуште код у GitHub-репозиторій.
-2. На [render.com](https://render.com) → **New → Web Service** → підключіть
-   репозиторій.
+1. Push the code to a GitHub repository.
+2. On [render.com](https://render.com) → **New → Web Service** → connect
+   the repository.
 3. Build command: `npm install`. Start command: `npm start`. Instance type:
    Free.
-4. Після деплою Render дасть URL типу `https://poker-live.onrender.com` —
-   саме його і давайте гравцям.
-
-⚠️ Безкоштовний інстанс Render "засинає" після ~15 хв без запитів і
-прокидається 30-50 секунд при першому заході — відкрийте посилання самі за
-хвилину до початку гри, щоб сервер встиг прокинутись.
+4. Once deployed, Render gives you a URL like
+   `https://poker-live.onrender.com` — that's what you share with players.
