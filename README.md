@@ -17,25 +17,6 @@ on their turn.
 > takes 30–50s to wake up on the next request — open the link yourself a
 > minute before the game starts so it has time to spin up.
 
-## Running locally
-
-```bash
-npm install
-npm start
-```
-
-The site comes up on `http://localhost:3000`.
-
-- **Players** open `http://localhost:3000/` (or a shared link with the room
-  code already in it — see below), enter the room code and their name.
-- **The host** opens `http://localhost:3000/admin.html`, creates a room
-  (blinds, starting stack, timer), and gets a room code + a link for
-  players.
-
-Playing on one Wi-Fi network without deploying anywhere? Find your laptop's
-local IP (`ipconfig getifaddr en0` on a Mac) and share `http://<IP>:3000`
-instead of `localhost`.
-
 ## How to play
 
 1. The host opens `/admin.html`, creates a room — gets a code (e.g. `A7K2`)
@@ -82,21 +63,4 @@ game in the same room with the same code, without creating a new one.
   covers the table.
 - If a player tries to fold when there's nothing to call (checking is
   free), a joking confirmation pops up to catch accidental folds.
-
-## Technical details
-
-- Backend: Node.js + Express + Socket.IO. Game state lives in server
-  memory (no database) — that's fine for a single game session, but it
-  means restarting the server wipes every room.
-- Frontend: plain HTML/CSS/JS, no build step, no framework.
-- Side pots for all-ins are computed automatically.
-
-## Deploying to Render.com
-
-1. Push the code to a GitHub repository.
-2. On [render.com](https://render.com) → **New → Web Service** → connect
-   the repository.
-3. Build command: `npm install`. Start command: `npm start`. Instance type:
-   Free.
-4. Once deployed, Render gives you a URL like
-   `https://poker-live.onrender.com` — that's what you share with players.
+- Side pots for all-ins are split automatically.
